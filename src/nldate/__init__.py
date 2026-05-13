@@ -57,6 +57,7 @@ def parse(s: str, today: date | None = None) -> date:
         return date(year, month, day)
 
     cleaned = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", s)
+    cleaned = cleaned.replace(".", "")
 
     for fmt in [
         "%B %d %Y",
