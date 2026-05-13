@@ -31,9 +31,17 @@ def parse(s: str, today: date | None = None) -> date:
     if match:
         return today + timedelta(days=int(match.group(1)))
 
+    match = re.fullmatch(r"in (\d+) weeks?", s)
+    if match:
+        return today + timedelta(weeks=int(match.group(1)))
+
     match = re.fullmatch(r"(\d+) days? ago", s)
     if match:
         return today - timedelta(days=int(match.group(1)))
+
+    match = re.fullmatch(r"(\d+) weeks? ago", s)
+    if match:
+        return today - timedelta(weeks=int(match.group(1)))
 
     match = re.fullmatch(r"next (\w+)", s)
     if match:
