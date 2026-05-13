@@ -66,6 +66,23 @@ def _add_unit(d: date, amount: int, unit: str) -> date:
     raise ValueError(f"Invalid unit: {unit}")
 
 
+def _apply_multiple_units(d: date, expr: str, sign: int) -> date:
+    parts = re.split(r",| and ", expr)
+
+    for part in parts:
+        part = part.strip()
+
+        match = re.fullmatch(r"(\d+|[a-z]+) (days?|weeks?|months?|years?)", part)
+        if not match:
+            raise ValueError(f"Invalid duration: {part}")
+
+        amount = _num(match.group(1)) * sign
+        unit = match.group(2)
+        d = _add_unit(d, amount, unit)
+
+    return d
+
+
 def parse(s: str, today: date | None = None) -> date:
     if today is None:
         today = date.today()
@@ -90,37 +107,27 @@ def parse(s: str, today: date | None = None) -> date:
         unit = match.group(2)
         return _add_unit(today, amount, unit)
 
-    match = re.fullmatch(r"(\d+|[a-z]+) (days?|weeks?|months?|years?) ago", s)
+    match = re.fullmatch(r"(.+) ago", s)
     if match:
-        amount = _num(match.group(1))
-        unit = match.group(2)
-        return _add_unit(today, -amount, unit)
+        return _apply_multiple_units(today, match.group(1), -1)
 
-    match = re.fullmatch(r"(\d+|[a-z]+) (days?|weeks?|months?|years?) from now", s)
+    match = re.fullmatch(r"(.+) from now", s)
     if match:
-        amount = _num(match.group(1))
-        unit = match.group(2)
-        return _add_unit(today, amount, unit)
+        return _apply_multiple_units(today, match.group(1), 1)
 
-    match = re.fullmatch(r"(\d+|[a-z]+) (days?|weeks?|months?|years?) from tomorrow", s)
+    match = re.fullmatch(r"(.+) from tomorrow", s)
     if match:
-        amount = _num(match.group(1))
-        unit = match.group(2)
-        return _add_unit(today + timedelta(days=1), amount, unit)
+        return _apply_multiple_units(today + timedelta(days=1), match.group(1), 1)
 
-    match = re.fullmatch(r"(\d+|[a-z]+) (days?|weeks?|months?|years?) after (.+)", s)
+    match = re.fullmatch(r"(.+) after (.+)", s)
     if match:
-        amount = _num(match.group(1))
-        unit = match.group(2)
-        base = parse(match.group(3), today)
-        return _add_unit(base, amount, unit)
+        base = parse(match.group(2), today)
+        return _apply_multiple_units(base, match.group(1), 1)
 
-    match = re.fullmatch(r"(\d+|[a-z]+) (days?|weeks?|months?|years?) before (.+)", s)
+    match = re.fullmatch(r"(.+) before (.+)", s)
     if match:
-        amount = _num(match.group(1))
-        unit = match.group(2)
-        base = parse(match.group(3), today)
-        return _add_unit(base, -amount, unit)
+        base = parse(match.group(2), today)
+        return _apply_multiple_units(base, match.group(1), -1)
 
     match = re.fullmatch(r"next (\w+)", s)
     if match:
