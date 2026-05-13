@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import re
 
 WEEKDAYS = {
@@ -27,44 +27,36 @@ def parse(s: str, today: date | None = None) -> date:
     if s == "yesterday":
         return today - timedelta(days=1)
 
-    # in X days
-    match = re.match(r"in (\d+) days?", s)
+    match = re.fullmatch(r"in (\d+) days?", s)
     if match:
-        days = int(match.group(1))
-        return today + timedelta(days=days)
+        return today + timedelta(days=int(match.group(1)))
 
-    # X days ago
-    match = re.match(r"(\d+) days? ago", s)
+    match = re.fullmatch(r"(\d+) days? ago", s)
     if match:
-        days = int(match.group(1))
-        return today - timedelta(days=days)
+        return today - timedelta(days=int(match.group(1)))
 
-    # next weekday
-    match = re.match(r"next (\w+)", s)
+    match = re.fullmatch(r"next (\w+)", s)
     if match:
         weekday_name = match.group(1)
-
         if weekday_name not in WEEKDAYS:
             raise ValueError("Invalid weekday")
 
-        target = WEEKDAYS[weekday_name]
-        current = today.weekday()
-
-        delta = (target - current) % 7
-
+        delta = (WEEKDAYS[weekday_name] - today.weekday()) % 7
         if delta == 0:
             delta = 7
-
         return today + timedelta(days=delta)
 
-    # YYYY-MM-DD
     try:
         return date.fromisoformat(s)
     except ValueError:
         pass
 
-    # Month Day Year
-    cleaned = re.sub(r"(st|nd|rd|th)", "", s)
+    match = re.fullmatch(r"(\d{4})/(\d{1,2})/(\d{1,2})", s)
+    if match:
+        year, month, day = map(int, match.groups())
+        return date(year, month, day)
+
+    cleaned = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", s)
 
     for fmt in [
         "%B %d %Y",
@@ -73,8 +65,6 @@ def parse(s: str, today: date | None = None) -> date:
         "%b %d, %Y",
     ]:
         try:
-            from datetime import datetime
-
             return datetime.strptime(cleaned, fmt).date()
         except ValueError:
             continue
